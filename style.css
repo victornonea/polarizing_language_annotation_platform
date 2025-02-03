@@ -1,0 +1,52 @@
+body {
+    font-family: Georgia, serif;
+    margin: 60px;
+    background-color: #F8F8FF;
+}
+
+.warning {
+    color: red;
+}
+
+.box {
+    background-color: lightyellow;
+    border: 2px solid black;
+    padding: 10px;
+    margin: 10px;
+}
+
+.options {
+    display: flex;
+    gap: 20px;
+}
+
+.disabled {
+    color: grey;
+    pointer-events: none; /* Prevent interaction */
+}
+
+.hard-disabled {
+    display: none;
+    /* visibility: hidden; */
+}
+
+.enabled {
+    display: flex;
+}
+
+em {
+   font-style: italic;
+   font-weight: bold;
+}
+
+.pol-itd {
+    color: darkred;
+    font-style: italic;
+    font-weight: bold;
+}
+
+.pol-inc {
+    color: goldenrod;
+    font-style: italic;
+    font-weight: bold;
+}

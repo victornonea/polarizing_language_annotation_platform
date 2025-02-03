@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polarizing Language Annotation</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    
+    <div> You are logged in as: <em id="username"></em>&nbsp;&nbsp;&nbsp;<button onClick="Logout();"> Logout </button></div>
+
+    <h1>Welcome to Polarizing Language Annotation Project</h1>
+    <div class="warning">This current version of the platform is a beta test, intending to test usability, understandibility and functionality. All submissions except feedback will be discarded.</div>
+    <br>
+    The intent of this platform is to augment the SemEval-2020 Task 11 dataset with new labels. The dataset consists of news articles from various outlets, the original labels were for propagandist rethoric. We intend to introduce labels in relation to the more general notion of <em>polarized language</em>.
+    <br><br>
+    You will be provided some auxiliary information, such as definitions, then an article to read through, then a set of questions about the article. Articles from this dataset have around 50 sentences on average, however some are a lot larger. It is fine to read the article at a rapid pace, however, if you feel inclined to skip text because the article as a whole is too large, <em>please skip to a different article</em>; there is a skip button immediately after the article. We prefer to have less but cleaner data.
+    <br><br>
+    After the questions about the article as a whole there will be a section where we ask you to highlight passages within the article which have motivated your answers.
+    
+    <h2>Definitions</h2>
+    
+    For the purposes of this study we define <em>polarization</em> as the characteristic of a media item to be likely to elicit a strong emotional response from a reader of the media item.
+    <br><br>
+    Furthermore, in this study we will distinguish between two kinds of polarization: <span class="pol-itd">intentional</span> and <span class="pol-inc">incidental</span>:
+    <ul>
+        <li><em><span class="pol-itd">Intentional</span> polarization</em> is when the polarized content is consistent with the beliefs or interests of the author (this concept is very similar to propagandist rethoric)<br><br>
+        <li><em><span class="pol-inc">Incidental</span> polarization</em> is when the polarized content is intrinsically related to the topic being discussed, most commonly when an author cites or paraphrases the opinion of other parties involved or when the objective details of the topic inherently illicit an emotional reaction (e.g. when discussing a natural disaster or a violent crime).
+    </ul>
+    Although less common, we note that an article could be both <em>intentionally polarizing</em> and <em>incidentally polarizing</em>.
+    <br><br>
+    
+    <h2>Article</h2>
+    
+    <div id="FirstViewArticle", class="box"></div>
+    <button id="setArticleButton">Skip</button>
+    
+    <h2>Questions</h2>
+    
+    <form id="questionForm"></form>
+    
+    <button onClick="Submit();"> Submit </button>
+    
+    <script>
+        var supabase_client;
+        var article_id;
+        var form_data;
+        
+        function EnableQuestion(target_q_str) {
+            const targetQ = document.getElementById('div' + target_q_str);
+            const targetQInputs = targetQ.querySelectorAll('input[name="' + target_q_str + '"]');
+
+            targetQ.classList.remove('disabled');
+            targetQInputs.forEach(input => {
+                input.disabled = false;
+            });
+        }
+        
+        function DisableQuestion(target_q_str) {
+            const targetQ = document.getElementById('div' + target_q_str);
+            const targetQInputs = targetQ.querySelectorAll('input[name="' + target_q_str + '"]');
+
+            targetQ.classList.add('disabled');
+            targetQInputs.forEach(input => {
+                input.disabled = true;
+                input.checked = false;
+            });
+        }
+        
+        async function Submit() {
+            answers = []
+            for (let i = 0; i < form_data.length; i++) {
+                const question = form_data[i];
+                const input_elem = document.querySelector(`input[name="${question.id}"]:checked`);
+                if (input_elem === null) continue;
+                
+                const answer = input_elem.value;
+                if (answer === undefined) continue;
+                
+                answers.push({'article_id': article_id, 'question_id': question.id, 'answer': answer})
+            }
+            const { error } = await session.from('FormAnswers').insert(answers);
+        }
+        
+        async function Logout() {
+            window.logout(supabase_client);
+            await window.checkSession();
+        }
+    </script>
+
+    <script type="module">
+        import {get_supabase_client, user_login, logout, fetchArticleIds, randChoice, fetchArticle, setText, fetchFormQuestionsData} from "./util.js"
+        
+        window.logout = logout;
+        
+        setInterval(checkSession, 3000)
+        
+        async function main() {
+            supabase_client = get_supabase_client()
+            
+            document.getElementById('setArticleButton').addEventListener('click', setArticle);
+            
+            await setArticle(supabase_client);
+            
+            await populateForm();
+            
+            await checkSession();
+        }
+        
+        async function checkSession() {
+            const { data, error } = await supabase_client.auth.getSession();
+            const { session } = data;
+            
+            if (session === null) window.location.href = 'login.html';
+            
+            const user_email = session.user.email;
+            const user_email_elem = document.getElementById('username');
+            user_email_elem.innerText = user_email;
+        }
+        window.checkSession = checkSession;
+        
+        async function setArticle() {
+            const ids = await fetchArticleIds(supabase_client);
+            
+            article_id = randChoice(ids)['id'];
+            
+            const article = await fetchArticle(article_id, supabase_client);
+            
+            setText(article['text'], 'FirstViewArticle');
+        }
+        
+        async function populateForm() {
+            form_data = await fetchFormQuestionsData(supabase_client);
+            const form_element = document.getElementById('questionForm');
+            var innerHTML = ''
+            for (let i = 0; i < form_data.length; i++) {
+                const question = form_data[i];
+                var option_list = '';
+                const question_type = question.FormQuestionType
+                const options = JSON.parse(question_type.options);
+                const option_labels = JSON.parse(question_type.option_labels);
+                const actions = JSON.parse(question.actions);
+                
+                for (let j = 0; j < options.length; j++) {
+                    const option = options[j];
+                    const option_label = option_labels[j];
+                    
+                    option_list += `<label><input type="radio" name="${question.id}" value=${option} ${(question.is_enable_by_default) ? "" : "disabled"} onclick="${actions[option] || ""}"> ${option_label} <\/label>\n`;
+                }
+                
+                innerHTML += `
+                    <div id="div${question.id}" class=${(question.is_enable_by_default) ? "none" : "\"disabled\""}>
+                        <label>${question.text}<\/label>
+                        <div class="options">
+                            ${option_list}
+                        <\/div>
+                    <\/div>
+                `
+            }
+            form_element.innerHTML = innerHTML;
+        }
+        
+        main();
+        
+    </script>
+
+</body>
+</html>
+
+
