@@ -12,24 +12,31 @@
     <div> You are logged in as: <em id="username"></em>&nbsp;&nbsp;&nbsp;<button onClick="Logout();"> Logout </button></div>
 
     <h1>Welcome to Polarizing Language Annotation Project</h1>
-    <div class="warning">This current version of the platform is a beta test, intending to test usability, understandibility and functionality. All submissions except feedback will be discarded.</div>
+    <!--<div class="warning">This current version of the platform is a beta test, intending to test usability, understandibility and functionality. All submissions except feedback will be discarded.</div> -->
+    
+    The intent of this platform is to augment the SemEval-2020 Task 11 dataset [1] with new labels. The dataset consists of news articles from various outlets, the original labels were for propagandist rethoric. We intend to introduce labels in relation to the more general notion of <em>polarizing language</em>. A secondary purpose of this labeling task is to verify the reliability of annotations over an intersubjective subject (<em>polarizing language</em>) under different settings.
+    <br><br>
+    <em>DATA PERMISSIONS</em>: By participating in this annotation task you agree to have your answers (annotations) used for academic purposes. You also agree to have your answers shared publicly for academic use, with any personally identifying information removed / anonymized.
+    <br><br>
+    You will be provided some auxiliary information, such as definitions, then an article to read through, then a set of questions about the article. Some articles are fixed and some are chosen randomly from the dataset. Articles from this dataset have around 50 sentences on average, however some are a lot larger. It is fine to read the article at a rapid pace, however, if you feel inclined to skip text because the article as a whole is too large, <em>please skip to a different article</em>; there is a skip button immediately after the article. We prefer to have less but cleaner data. (This is relevant for the random articles, the fixed articles are curated to be of a more typical length and are unskipable.)
+    <br><br>
+    Your answers are saved after per article after each submit. You do not have to complete all articles in one go. You can exit the platform at any time and come back later. You may lose the answers on the current article and you may have to log in again.
+    <br><br>
+    [1] "SemEval-2020 Task 11: Detection of Propaganda Techniques in News Articles" <a href="https://aclanthology.org/2020.semeval-1.186/">https://aclanthology.org/2020.semeval-1.186/</a>
     <br>
-    The intent of this platform is to augment the SemEval-2020 Task 11 dataset with new labels. The dataset consists of news articles from various outlets, the original labels were for propagandist rethoric. We intend to introduce labels in relation to the more general notion of <em>polarized language</em>.
-    <br><br>
-    You will be provided some auxiliary information, such as definitions, then an article to read through, then a set of questions about the article. Articles from this dataset have around 50 sentences on average, however some are a lot larger. It is fine to read the article at a rapid pace, however, if you feel inclined to skip text because the article as a whole is too large, <em>please skip to a different article</em>; there is a skip button immediately after the article. We prefer to have less but cleaner data.
-    <br><br>
-    After the questions about the article as a whole there will be a section where we ask you to highlight passages within the article which have motivated your answers.
     
     <h2>Definitions</h2>
     
-    For the purposes of this study we define <em>polarization</em> as the characteristic of a media item to be likely to elicit a strong emotional response from a reader of the media item.
+    For the purposes of this study we define <em>polarization</em> as the characteristic of a media item to be likely to elicit a strong emotional response directed at a person or group of people or category of people.
     <br><br>
     Furthermore, in this study we will distinguish between two kinds of polarization: <span class="pol-itd">intentional</span> and <span class="pol-inc">incidental</span>:
     <ul>
-        <li><em><span class="pol-itd">Intentional</span> polarization</em> is when the polarized content is consistent with the beliefs or interests of the author (this concept is very similar to propagandist rethoric)<br><br>
+        <li><em><span class="pol-itd">Intentional</span> polarization</em> is when the polarized content is consistent with the beliefs or interests of the author (this concept is similar to propagandist rethoric)<br><br>
         <li><em><span class="pol-inc">Incidental</span> polarization</em> is when the polarized content is intrinsically related to the topic being discussed, most commonly when an author cites or paraphrases the opinion of other parties involved or when the objective details of the topic inherently illicit an emotional reaction (e.g. when discussing a natural disaster or a violent crime).
     </ul>
-    Although less common, we note that an article could be both <em>intentionally polarizing</em> and <em>incidentally polarizing</em>.
+    Although less common, we note that an article could be both <em><span class="pol-itd">intentionally</span> polarizing</em> and <em><span class="pol-inc">incidentally</span> polarizing</em>.
+    <br><br>
+    For all articles you will be asked whether you consider it to be intentionally or incidentally polarized. For some articles you will also be asked to identify the presence of specific patterns relating to polarizing language. For the specific pattern questions we will also ask if the presence of the pattern indicates some form of polarization. We note that there is no right or wrong answer here, we encourage the participants to use their personal intuition and the context of the article as a whole to judge whether the presence of a pattern is or is not indicative of polarization.
     <br><br>
     
     <h2>Article</h2>
@@ -81,7 +88,9 @@
                 
                 answers.push({'article_id': article_id, 'question_id': question.id, 'answer': answer})
             }
-            const { error } = await session.from('FormAnswers').insert(answers);
+            const { error } = await supabase_client.from('FormAnswers').insert(answers);
+            
+            window.location.reload();
         }
         
         async function Logout() {
@@ -133,6 +142,8 @@
         
         async function populateForm() {
             form_data = await fetchFormQuestionsData(supabase_client);
+            form_data.sort(function(a, b){return a.order - b.order});
+            
             const form_element = document.getElementById('questionForm');
             var innerHTML = ''
             for (let i = 0; i < form_data.length; i++) {
@@ -152,11 +163,11 @@
                 
                 innerHTML += `
                     <div id="div${question.id}" class=${(question.is_enable_by_default) ? "none" : "\"disabled\""}>
-                        <label>${question.text}<\/label>
+                        <label>${i+1}. ${question.text}<\/label>
                         <div class="options">
                             ${option_list}
                         <\/div>
-                    <\/div>
+                    <\/div><br>
                 `
             }
             form_element.innerHTML = innerHTML;
