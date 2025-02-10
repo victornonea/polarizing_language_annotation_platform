@@ -11,7 +11,7 @@
     
     <div> You are logged in as: <em id="username"></em>&nbsp;&nbsp;&nbsp;<button onClick="Logout();"> Logout </button></div>
 
-    <h1>Welcome to Polarizing Language Annotation Project</h1>
+    <h1>Welcome to Polarizing Language Annotation Project (BETA)</h1>
     <!--<div class="warning">This current version of the platform is a beta test, intending to test usability, understandibility and functionality. All submissions except feedback will be discarded.</div> -->
     
     The intent of this platform is to augment the SemEval-2020 Task 11 dataset [1] with new labels. The dataset consists of news articles from various outlets, the original labels were for propagandist rethoric. We intend to introduce labels in relation to the more general notion of <em>polarizing language</em>. A secondary purpose of this labeling task is to verify the reliability of annotations over an intersubjective subject (<em>polarizing language</em>) under different settings.
@@ -48,12 +48,18 @@
     
     <form id="questionForm"></form>
     
-    <button onClick="Submit();"> Submit </button>
+    <div>(Optional) Feedback: Are there any issues with the form questions or the article? These notes may be used for a qualitative analysis of the annotation results. (During the BETA this field is disabled, please report general feedback directly to developer.)</div>
+    <textarea id="feedback" name="feedback" rows="4" cols="50" disabled=false></textarea>
+    <br>
+    
+    <button id="submitButton" onClick="Submit();"> Submit </button>
     
     <script>
         var supabase_client;
         var article_id;
         var form_data;
+        
+        const submitButton = document.getElementById('submitButton');
         
         function EnableQuestion(target_q_str) {
             const targetQ = document.getElementById('div' + target_q_str);
@@ -90,12 +96,39 @@
             }
             const { error } = await supabase_client.from('FormAnswers').insert(answers);
             
+            feedback = document.getElementById('feedback').value;
+            if (feedback) {
+                const { error } = await supabase_client.from('FormFeedback').insert({'article_id': article_id, 'text': feedback});
+            }
+            
             window.location.reload();
         }
         
         async function Logout() {
             window.logout(supabase_client);
             await window.checkSession();
+        }
+        
+        function checkFormCompletionState() {
+            submitButton.disabled = !isFormCompleted();
+        } 
+        
+        function isFormCompleted() {
+            if (typeof form_data === typeof undefined) return false;
+            if (form_data === undefined) return false;
+            
+            for (let i = 0; i < form_data.length; i++) {
+                const question = form_data[i];
+                const q_elem = document.getElementById('div' + question.id);
+                
+                if (q_elem.classList.contains('disabled'))
+                    continue;
+                
+                const input_elem = document.querySelector(`input[name="${question.id}"]:checked`);
+                if (input_elem === null)
+                    return false;
+            }
+            return true;
         }
     </script>
 
@@ -104,7 +137,9 @@
         
         window.logout = logout;
         
-        setInterval(checkSession, 3000)
+        setInterval(checkSession, 3000);
+        
+        checkFormCompletionState();
         
         async function main() {
             supabase_client = get_supabase_client()
@@ -158,7 +193,7 @@
                     const option = options[j];
                     const option_label = option_labels[j];
                     
-                    option_list += `<label><input type="radio" name="${question.id}" value=${option} ${(question.is_enable_by_default) ? "" : "disabled"} onclick="${actions[option] || ""}"> ${option_label} <\/label>\n`;
+                    option_list += `<label><input type="radio" name="${question.id}" value=${option} ${(question.is_enable_by_default) ? "" : "disabled"} onclick="${(actions[option] || "") + "checkFormCompletionState();"}"> ${option_label} <\/label>\n`;
                 }
                 
                 innerHTML += `
