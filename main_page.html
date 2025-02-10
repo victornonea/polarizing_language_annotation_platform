@@ -48,8 +48,8 @@
     
     <form id="questionForm"></form>
     
-    <div>(Optional) Feedback: Are there any issues with the form questions or the article? These notes may be used for a qualitative analysis of the annotation results. (During the BETA this field is disabled, please report general feedback directly to developer.)</div>
-    <textarea id="feedback" name="feedback" rows="4" cols="50" disabled=false></textarea>
+    <div>(Optional) Feedback: Are there any issues with the form questions or the article? These notes may be used for a qualitative analysis of the annotation results. (During the BETA you may use this field for general feedback and/or discuss directly with the developer.)</div>
+    <textarea id="feedback" name="feedback" rows="4" cols="50"></textarea>
     <br>
     
     <button id="submitButton" onClick="Submit();"> Submit </button>
@@ -58,6 +58,7 @@
         var supabase_client;
         var article_id;
         var form_data;
+        var form_type;
         
         const submitButton = document.getElementById('submitButton');
         
@@ -179,6 +180,9 @@
             form_data = await fetchFormQuestionsData(supabase_client);
             form_data.sort(function(a, b){return a.order - b.order});
             
+            if (form_type == 'short')
+                form_data = form_data.filter(function(q){ return q.mandatory; })
+            
             const form_element = document.getElementById('questionForm');
             var innerHTML = ''
             for (let i = 0; i < form_data.length; i++) {
@@ -198,7 +202,7 @@
                 
                 innerHTML += `
                     <div id="div${question.id}" class=${(question.is_enable_by_default) ? "none" : "\"disabled\""}>
-                        <label>${i+1}. ${question.text}<\/label>
+                        ${i+1}. ${question.text}
                         <div class="options">
                             ${option_list}
                         <\/div>
@@ -208,7 +212,17 @@
             form_element.innerHTML = innerHTML;
         }
         
-        main();
+        form_type = new URLSearchParams(window.location.search).get('form_type');
+        if (form_type === 'undefined' || (form_type != 'short' && form_type != 'long'))
+            document.body.innerHTML = `<h2>Error<\/h2>
+            In this BETA version of the platform, please embed the form type you wish to view by accessing either:
+            <ul>
+                <li>[domain]/main_page.html?form_type=short
+                <li>[domain]/main_page.html?form_type=long
+            <\/ul>
+            Thank you!`
+        else
+            main();
         
     </script>
 
