@@ -21,7 +21,7 @@ async function fetchArticleIds(client) {
          .from('Articles')
          .select('id');
     
-    return data
+    return data.map(({ id }) => id);
 }
 
 async function fetchArticle(id, client) {
@@ -36,9 +36,9 @@ async function fetchArticle(id, client) {
 async function fetchFormQuestionsData(client) {
     const { data, error } = await client
         .from('FormQuestions')
-        .select('*, FormQuestionType(*)')
+        .select('*, FormQuestionType(*)');
     
-    return data
+    return data;
 }
 
 function randChoice(arr) {
@@ -46,7 +46,20 @@ function randChoice(arr) {
 }
 
 function setText(text, elemId) {
-    document.getElementById(elemId).innerText = text
+    document.getElementById(elemId).innerText = text;
 }
 
-export {get_supabase_client, user_login, logout, fetchArticleIds, randChoice, fetchArticle, fetchFormQuestionsData, setText}
+function unique(array) {
+    return [... new Set(array)];
+}
+
+function difference(a1, a2) {
+    return a1.filter(e => !a2.includes(e));
+}
+
+function getQueryParam(param) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(param);
+}
+
+export {get_supabase_client, user_login, logout, fetchArticleIds, randChoice, fetchArticle, fetchFormQuestionsData, setText, unique, difference, getQueryParam}

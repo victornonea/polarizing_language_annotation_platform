@@ -11,16 +11,19 @@
     
     <div> You are logged in as: <em id="username"></em>&nbsp;&nbsp;&nbsp;<button onClick="Logout();"> Logout </button></div>
 
-    <h1>Welcome to Polarizing Language Annotation Project (BETA)</h1>
-    <!--<div class="warning">This current version of the platform is a beta test, intending to test usability, understandibility and functionality. All submissions except feedback will be discarded.</div> -->
+    <h1>Welcome to Polarizing Language Annotation Project</h1>
     
-    The intent of this platform is to augment the SemEval-2020 Task 11 dataset [1] with new labels. The dataset consists of news articles from various outlets, the original labels were for propagandist rethoric. We intend to introduce labels in relation to the more general notion of <em>polarizing language</em>. A secondary purpose of this labeling task is to verify the reliability of annotations over an intersubjective subject (<em>polarizing language</em>) under different settings.
+    The intent of this platform is to augment the SemEval-2020 Task 11 dataset [1] with new labels. The dataset consists of news articles from various outlets, the original labels were for propagandist rhetoric. We intend to introduce labels in relation to the more general notion of <em>polarizing language</em>. A secondary purpose of this labeling task is to verify the reliability of annotations over an intersubjective subject (<em>polarizing language</em>) under different settings.
     <br><br>
     <em>DATA PERMISSIONS</em>: By participating in this annotation task you agree to have your answers (annotations) used for academic purposes. You also agree to have your answers shared publicly for academic use, without any personally identifyable information.
     <br><br>
-    You will be provided some auxiliary information, such as definitions, then an article to read through, then a set of questions about the article. Some articles are fixed and some are chosen randomly from the dataset. Articles from this dataset have around 50 sentences on average, however some are a lot larger. It is fine to read the article at a rapid pace, however, if you feel inclined to skip text because the article as a whole is too large, <em>please skip to a different article</em>; there is a skip button immediately after the article. We prefer to have less but higher quality data. (This is relevant for the random articles, the fixed articles are curated to be of a more typical length and are unskipable.)
+    You will be provided some auxiliary information, such as definitions, then an article to read through, then a set of questions about the article. Some articles are fixed and some are chosen randomly from the dataset. Articles from this dataset have around 20 sentences on average, however some are a lot larger. It is fine to read the article at a rapid pace, however, if you feel inclined to skip text because the article as a whole is too large, <em>please skip to a different article</em>; there is a skip button immediately after the article. We prefer to have less but higher quality data. (This is relevant for the random articles, the fixed articles are curated to be of a more typical length and are unskipable.)
     <br><br>
     Your answers are saved per article after each submit. You do not have to complete all articles in one go. You can exit the platform at any time and come back later. You may lose the answers on the current article and you may have to log in again.
+    <br><br>
+    The main body of articles for annotation contains <em>16</em> articles, some fixed, some random. We estimate it would take on average 90 minutes for an annotator to annotate the main body of articles. You may complete additional articles once you are done with the main body. We would greatly appreciate if you do so as that could potentially improve the evaluation of our machine learning model.
+    <br><br>
+    Articles completed so far: <em id="articles_completed_so_far"></em>
     <br><br>
     [1] "SemEval-2020 Task 11: Detection of Propaganda Techniques in News Articles" <a href="https://aclanthology.org/2020.semeval-1.186/">https://aclanthology.org/2020.semeval-1.186/</a>
     <br>
@@ -31,24 +34,26 @@
     <br><br>
     Furthermore, in this study we will distinguish between two kinds of polarization: <span class="pol-itd">intentional</span> and <span class="pol-inc">incidental</span>:
     <ul>
-        <li><em><span class="pol-itd">Intentional</span> polarization</em> is when the polarized content is consistent with the beliefs or interests of the author (this concept is similar to propagandist rethoric)<br><br>
+        <li><em><span class="pol-itd">Intentional</span> polarization</em> is when the polarized content is consistent with the beliefs or interests of the author (this concept is similar to propagandist rhetoric)<br><br>
         <li><em><span class="pol-inc">Incidental</span> polarization</em> is when the polarized content is intrinsically related to the topic being discussed, most commonly when an author cites or paraphrases the opinion of other parties involved or when the objective details of the topic inherently illicit an emotional reaction (e.g. when discussing a natural disaster or a violent crime).
     </ul>
     Although less common, we note that an article could be both <em><span class="pol-itd">intentionally</span> polarizing</em> and <em><span class="pol-inc">incidentally</span> polarizing</em>. Of course, some articles may not be polarized at all.
     <br><br>
     For all articles you will be asked whether you consider it to be intentionally or incidentally polarized. For some articles you will also be asked to identify the presence of specific patterns relating to polarizing language. For the specific pattern questions we will also ask if the presence of the pattern indicates some form of polarization. We note that there is no right or wrong answer here, we encourage the participants to use their personal intuition and the context of the article as a whole to judge whether the presence of a pattern is or is not indicative of polarization.
     <br><br>
+    If you need to be able to view the questions and the article text side by side, we recommend that you use the <em>Open in article separate view</em> which will open a separate tab containing only the article text.
+    <br><br>
     
     <h2>Article</h2>
     
     <div id="FirstViewArticle", class="box"></div>
-    <button id="setArticleButton">Skip</button>
+    <button id="setArticleButton", class="disabled">Skip</button>&nbsp;&nbsp;&nbsp;<button onClick="OpenArticleView();"> Open article in separate view </button>
     
     <h2>Questions</h2>
     
     <form id="questionForm"></form>
     
-    <div>(Optional) Feedback: Are there any issues with the form questions or the article? These notes may be used for a qualitative analysis of the annotation results. (During the BETA you may use this field for general feedback and/or discuss directly with the developer.)</div>
+    <div>(Optional) Feedback: Are there any issues with the form questions or the article? These notes may be used for a qualitative analysis of the annotation results.</div>
     <textarea id="feedback" name="feedback" rows="4" cols="50"></textarea>
     <br>
     
@@ -59,6 +64,8 @@
         var article_id;
         var form_data;
         var form_type;
+        var user_state;
+        var user_is_experimental;
         
         const submitButton = document.getElementById('submitButton');
         
@@ -84,7 +91,8 @@
         }
         
         async function Submit() {
-            answers = []
+            answers = [];
+            
             for (let i = 0; i < form_data.length; i++) {
                 const question = form_data[i];
                 const input_elem = document.querySelector(`input[name="${question.id}"]:checked`);
@@ -93,14 +101,21 @@
                 const answer = input_elem.value;
                 if (answer === undefined) continue;
                 
-                answers.push({'article_id': article_id, 'question_id': question.id, 'answer': answer})
+                answers.push({'article_id': article_id, 'question_id': question.id, 'answer': answer, 'user': window.session.user.id})
             }
-            const { error } = await supabase_client.from('FormAnswers').insert(answers);
+            {
+                const { error } = await supabase_client.from('FormAnswers').insert(answers);
+                if (error) console.log(error);
+            }
             
             feedback = document.getElementById('feedback').value;
             if (feedback) {
                 const { error } = await supabase_client.from('FormFeedback').insert({'article_id': article_id, 'text': feedback});
+                if (error) console.log(error);
             }
+            
+            const { error } = await supabase_client.from('UserState').update({'state': user_state + 1}).eq('user_id', window.session.user.id);
+            if (error) console.log(error);
             
             window.location.reload();
         }
@@ -131,10 +146,31 @@
             }
             return true;
         }
+        
+        async function fetchUserState() {
+            const { data, error } = await supabase_client.from('UserState').upsert({'user_id': window.session.user.id}).select();
+            if (error) console.log(error);
+            return data[0];
+        }
+        
+        function OpenArticleView() {
+            window.open(`article_view.html?article_id=${article_id}`, '_blank').focus();
+        }
+        
+        function create_actions_dictionary(controlled_questions, enable_options, disable_options) {
+            const actions = {};
+            for (let i = 0; i < enable_options.length; i++) {
+                actions[enable_options[i]] = controlled_questions.map((q) => `EnableQuestion('${q}');`).join('');
+            }
+            for (let i = 0; i < disable_options.length; i++) {
+                actions[disable_options[i]] = controlled_questions.map((q) => `DisableQuestion('${q}');`).join('');
+            }
+            return actions;
+        }
     </script>
 
     <script type="module">
-        import {get_supabase_client, user_login, logout, fetchArticleIds, randChoice, fetchArticle, setText, fetchFormQuestionsData} from "./util.js"
+        import {get_supabase_client, user_login, logout, fetchArticleIds, randChoice, fetchArticle, setText, fetchFormQuestionsData, unique, difference} from "./util.js"
         
         window.logout = logout;
         
@@ -145,13 +181,17 @@
         async function main() {
             supabase_client = get_supabase_client()
             
-            document.getElementById('setArticleButton').addEventListener('click', setArticle);
-            
-            await setArticle(supabase_client);
-            
-            await populateForm();
+            document.getElementById('setArticleButton').addEventListener('click', setArticleAndFormType);
             
             await checkSession();
+            
+            const { state, is_experimental } = await fetchUserState();
+            user_state = state;
+            user_is_experimental = is_experimental;
+            
+            await setArticleAndFormType(supabase_client);
+            
+            await populateForm();
         }
         
         async function checkSession() {
@@ -160,16 +200,48 @@
             
             if (session === null) window.location.href = 'login.html';
             
+            window.session = session;
+            
             const user_email = session.user.email;
             const user_email_elem = document.getElementById('username');
             user_email_elem.innerText = user_email;
         }
         window.checkSession = checkSession;
         
-        async function setArticle() {
-            const ids = await fetchArticleIds(supabase_client);
+        async function setArticleAndFormType() {
+            const queried_state = (user_state <= 16) ? user_state : 16;
+                
+            const already_completed_articles = unique((await supabase_client.from('FormAnswers').select('article_id').eq('user', window.session.user.id)).data.map(({ article_id }) => article_id));
+        
+            document.getElementById("articles_completed_so_far").innerText = already_completed_articles.length;
+        
+            const behaviour = (await supabase_client.from('StateBehaviour').select().eq('state', queried_state)).data[0];
             
-            article_id = randChoice(ids)['id'];
+            if (behaviour.article_id == 'random') {
+                document.getElementById('setArticleButton').classList.remove('disabled');
+            
+                const ids = await fetchArticleIds(supabase_client);
+                
+                const special_articles = unique((await supabase_client.from('StateBehaviour').select('article_id')).data.map(({ article_id }) => article_id));
+                
+                const available_ids = difference(ids, special_articles.concat(already_completed_articles));
+                
+                if (available_ids.length == 0) {
+                    document.body.innerHTML = `
+                        <h2> Dataset fully annotated <\/h2>
+                        Dear annotator, it appears you have submitted annotations for all ${ids.length} articles contained within the available set. We thank you very much for your contribution!
+                        <br>
+                        If you suspect this may be an error please contact the system administrator.
+                    `
+                    throw new Error("All articles are annotated by user.");
+                }
+                
+                article_id = randChoice(available_ids);
+            }
+            else article_id = behaviour.article_id;
+            
+            if (behaviour.form_type == 'experiment') form_type = user_is_experimental ? 'short' : 'long';
+            else form_type = behaviour.form_type;
             
             const article = await fetchArticle(article_id, supabase_client);
             
@@ -189,9 +261,13 @@
                 const question = form_data[i];
                 var option_list = '';
                 const question_type = question.FormQuestionType
-                const options = JSON.parse(question_type.options);
-                const option_labels = JSON.parse(question_type.option_labels);
-                const actions = JSON.parse(question.actions);
+                const options = question_type.options;
+                const option_labels = question_type.option_labels;
+                const actions = create_actions_dictionary(
+                    question.controlled_questions,
+                    question.enable_options,
+                    question.disable_options
+                );
                 
                 for (let j = 0; j < options.length; j++) {
                     const option = options[j];
@@ -212,17 +288,7 @@
             form_element.innerHTML = innerHTML;
         }
         
-        form_type = new URLSearchParams(window.location.search).get('form_type');
-        if (form_type === 'undefined' || (form_type != 'short' && form_type != 'long'))
-            document.body.innerHTML = `<h2>Error<\/h2>
-            In this BETA version of the platform, please embed the form type you wish to view by accessing either:
-            <ul>
-                <li>[domain]/main_page.html?form_type=short
-                <li>[domain]/main_page.html?form_type=long
-            <\/ul>
-            Thank you!`
-        else
-            main();
+        main();
         
     </script>
 
