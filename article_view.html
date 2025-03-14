@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Article View</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h2> Article </h2>
+    <div id="FirstViewArticle", class="box"></div>
+    
+    <script type="module">
+        import {get_supabase_client, getQueryParam, setText, fetchArticle} from "./util.js"
+        
+        const article_id = getQueryParam('article_id');
+        
+        const supabase_client = get_supabase_client();
+        
+        async function main() {
+            
+            const article = await fetchArticle(article_id, supabase_client);
+            
+            setText(article['text'], 'FirstViewArticle');
+        }
+        
+        main();
+    </script>
+    
+</body>
+</html>
