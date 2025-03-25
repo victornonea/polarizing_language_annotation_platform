@@ -224,7 +224,11 @@
                 
                 const special_articles = unique((await supabase_client.from('StateBehaviour').select('article_id')).data.map(({ article_id }) => article_id));
                 
-                const available_ids = difference(ids, special_articles.concat(already_completed_articles));
+                const articles_with_two_or_more_annotators = (await supabase_client.from('UniqueUserCounts').select('article_id').gte('unique_user_count', 2)).data.map(({ article_id }) => article_id);
+                
+                const available_ids = difference(ids, special_articles
+                    .concat(already_completed_articles)
+                    .concat(articles_with_two_or_more_annotators));
                 
                 if (available_ids.length == 0) {
                     document.body.innerHTML = `
