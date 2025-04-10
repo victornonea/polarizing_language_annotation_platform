@@ -67,6 +67,8 @@
         var user_state;
         var user_is_experimental;
         
+        var get_param_article_id;
+        
         const submitButton = document.getElementById('submitButton');
         
         function EnableQuestion(target_q_str) {
@@ -178,6 +180,8 @@
         
         checkFormCompletionState();
         
+        get_param_article_id = (new URLSearchParams(document.location.search)).get("article_id");
+        
         async function main() {
             supabase_client = get_supabase_client()
             
@@ -209,6 +213,19 @@
         window.checkSession = checkSession;
         
         async function setArticleAndFormType() {
+            if (get_param_article_id === null)
+                await dynamicSetArticleAndFormType();
+            else {
+                article_id = get_param_article_id;
+                form_type = 'long';
+            }
+            
+            const article = await fetchArticle(article_id, supabase_client);
+            
+            setText(article['text'], 'FirstViewArticle');
+        }
+        
+        async function dynamicSetArticleAndFormType() {
             const queried_state = (user_state <= 16) ? user_state : 16;
                 
             const already_completed_articles = unique((await supabase_client.from('FormAnswers').select('article_id').eq('user', window.session.user.id)).data.map(({ article_id }) => article_id));
@@ -246,10 +263,6 @@
             
             if (behaviour.form_type == 'experiment') form_type = user_is_experimental ? 'short' : 'long';
             else form_type = behaviour.form_type;
-            
-            const article = await fetchArticle(article_id, supabase_client);
-            
-            setText(article['text'], 'FirstViewArticle');
         }
         
         async function populateForm() {
